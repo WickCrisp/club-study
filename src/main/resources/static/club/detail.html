@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社团详情 - 社团活动管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">社团活动管理系统</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" href="/">首页</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/club/list">社团管理</a></li>
+                <li class="nav-item"><a class="nav-link" href="/member/manage">成员管理</a></li>
+                <li class="nav-item"><a class="nav-link" href="/activity/manage">活动管理</a></li>
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown" id="userDropdown" style="display:none;">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <span id="userNameDisplay"></span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/user/profile">用户中心</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="logout()">退出登录</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item" id="loginLink"><a class="nav-link" href="/login">登录</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <a href="/club/list" class="btn btn-outline-secondary mb-3">← 返回社团列表</a>
+        <div class="card">
+            <div class="card-body" id="clubInfo">
+                <div class="text-center text-muted py-4">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">社团成员</h5>
+                    <button class="btn btn-sm btn-light" onclick="applyClub()">申请加入</button>
+                </div>
+                <div class="card-body" id="memberList">
+                    <div class="text-center text-muted py-3">加载中...</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">社团活动</h5>
+                </div>
+                <div class="card-body" id="activityList">
+                    <div class="text-center text-muted py-3">加载中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const clubId = window.location.pathname.split('/').pop();
+
+document.addEventListener('DOMContentLoaded', function() {
+    initUser();
+    loadClubInfo();
+    loadMembers();
+    loadActivities();
+});
+
+async function initUser() {
+    try {
+        const resp = await fetch('/api/user/current');
+        const result = await resp.json();
+        if (result.code === 200 && result.data) {
+            document.getElementById('userDropdown').style.display = 'block';
+            document.getElementById('loginLink').style.display = 'none';
+            document.getElementById('userNameDisplay').textContent = result.data.name;
+        }
+    } catch (e) {}
+}
+
+async function loadClubInfo() {
+    const resp = await fetch('/api/club/' + clubId);
+    const result = await resp.json();
+    if (result.code === 200) {
+        const c = result.data;
+        document.getElementById('clubInfo').innerHTML = '<h3>' + c.name + '</h3>' +
+            '<p class="text-muted">' + (c.description || '暂无简介') + '</p>' +
+            '<p>负责人：' + (c.leaderName || '未指定') + ' | 状态：' + (c.status === 'ACTIVE' ? '活跃' : '已解散') + '</p>';
+    }
+}
+
+async function loadMembers() {
+    const resp = await fetch('/api/club-member/club/' + clubId);
+    const result = await resp.json();
+    const container = document.getElementById('memberList');
+    if (result.code === 200 && result.data && result.data.length > 0) {
+        let html = '<table class="table table-hover"><thead><tr><th>姓名</th><th>学号</th><th>角色</th><th>状态</th></tr></thead><tbody>';
+        result.data.forEach(m => {
+            html += '<tr><td>' + m.userName + '</td><td>' + m.studentNo + '</td><td>' + getRoleText(m.role) + '</td><td>' + getMemberStatusBadge(m.status) + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    } else {
+        container.innerHTML = '<div class="text-center text-muted py-3">暂无成员</div>';
+    }
+}
+
+async function loadActivities() {
+    const resp = await fetch('/api/activity/club/' + clubId);
+    const result = await resp.json();
+    const container = document.getElementById('activityList');
+    if (result.code === 200 && result.data && result.data.length > 0) {
+        let html = '';
+        result.data.forEach(a => {
+            html += '<div class="card mb-2"><div class="card-body py-2">';
+            html += '<h6>' + a.title + '</h6>';
+            html += '<small class="text-muted">' + (a.startTime ? a.startTime.substring(0, 16) : '') + ' | ' + a.location + '</small>';
+            html += '<span class="badge bg-primary status-badge ms-2">' + getActivityStatusText(a.status) + '</span>';
+            html += '</div></div>';
+        });
+        container.innerHTML = html;
+    } else {
+        container.innerHTML = '<div class="text-center text-muted py-3">暂无活动</div>';
+    }
+}
+
+async function applyClub() {
+    const reason = prompt('请输入申请理由（可选）：');
+    const formData = new FormData();
+    formData.append('clubId', clubId);
+    if (reason) formData.append('applyReason', reason);
+    const resp = await fetch('/api/club-member/apply', { method: 'POST', body: formData });
+    const result = await resp.json();
+    if (result.code === 200) {
+        showToast('申请已提交', 'success');
+        loadMembers();
+    } else {
+        showToast(result.message, 'danger');
+    }
+}
+
+function getRoleText(role) {
+    const map = { 'LEADER': '负责人', 'VICE_LEADER': '副负责人', 'MEMBER': '成员' };
+    return map[role] || role;
+}
+
+function getMemberStatusBadge(status) {
+    const map = { 'PENDING': '<span class="badge bg-warning">待审核</span>', 'APPROVED': '<span class="badge bg-success">已通过</span>', 'REJECTED': '<span class="badge bg-danger">已拒绝</span>' };
+    return map[status] || status;
+}
+
+function getActivityStatusText(status) {
+    const map = { 'DRAFT': '草稿', 'PUBLISHED': '已发布', 'ONGOING': '进行中', 'FINISHED': '已结束', 'CANCELLED': '已取消' };
+    return map[status] || status;
+}
+
+function logout() { window.location.href = '/logout'; }
+
+function showToast(message, type) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-' + type + ' alert-dismissible fade show';
+    toast.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+</body>
+</html>

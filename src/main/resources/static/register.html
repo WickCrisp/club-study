@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社团活动管理系统 - 注册</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="login-container">
+    <div class="login-card" style="width: 480px;">
+        <h2>用户注册</h2>
+        <form id="registerForm">
+            <div class="mb-3">
+                <label for="studentNo" class="form-label">学号</label>
+                <input type="text" class="form-control" id="studentNo" placeholder="请输入学号" required>
+            </div>
+            <div class="mb-3">
+                <label for="name" class="form-label">姓名</label>
+                <input type="text" class="form-control" id="name" placeholder="请输入真实姓名" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">密码</label>
+                <input type="password" class="form-control" id="password" placeholder="请输入密码" required>
+            </div>
+            <div class="mb-3">
+                <label for="phone" class="form-label">手机号</label>
+                <input type="text" class="form-control" id="phone" placeholder="请输入手机号">
+            </div>
+            <div class="mb-3">
+                <label for="email" class="form-label">邮箱</label>
+                <input type="email" class="form-control" id="email" placeholder="请输入邮箱">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">性别</label>
+                <select class="form-control" id="gender">
+                    <option value="0">未知</option>
+                    <option value="1">男</option>
+                    <option value="2">女</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">注 册</button>
+        </form>
+        <div class="text-center mt-3">
+            <span>已有账号？</span><a href="/login">立即登录</a>
+        </div>
+    </div>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const data = {
+        studentNo: document.getElementById('studentNo').value,
+        name: document.getElementById('name').value,
+        password: document.getElementById('password').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value,
+        gender: parseInt(document.getElementById('gender').value)
+    };
+    try {
+        const response = await fetch('/api/user/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (result.code === 200) {
+            showToast('注册成功，即将跳转登录页', 'success');
+            setTimeout(() => window.location.href = '/login', 1500);
+        } else {
+            showToast(result.message, 'danger');
+        }
+    } catch (err) {
+        showToast('网络错误，请重试', 'danger');
+    }
+});
+
+function showToast(message, type) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-' + type + ' alert-dismissible fade show';
+    toast.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+</body>
+</html>

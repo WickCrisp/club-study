@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活动管理 - 社团活动管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background: #cfe8ff;
+            padding-top: 20px;
+        }
+        .sidebar .nav-link {
+            color: #c9a84c;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            transition: all 0.2s;
+        }
+        .sidebar .nav-link:hover { background: #7a7a7a; }
+        .sidebar .nav-link.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #3f3f3f; }
+        .sidebar .nav-link i { margin-right: 8px;background-color: #79b828; }
+        .content-area { min-height: 600px; padding: 20px; }
+        .activity-card { border-radius: 10px; transition: transform 0.2s; }
+        .activity-card:hover { transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">社团活动管理系统</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" href="/">首页</a></li>
+                <li class="nav-item"><a class="nav-link" href="/club/list">社团管理</a></li>
+                <li class="nav-item"><a class="nav-link" href="/member/manage">成员管理</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/activity/manage">活动管理</a></li>
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown" id="userDropdown" style="display:none;">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <span id="userNameDisplay"></span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/user/profile">用户中心</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="logout()">退出登录</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item" id="loginLink"><a class="nav-link" href="/login">登录</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2 sidebar">
+            <h6 class="text-muted px-3 mb-3">📋 书页分类</h6>
+            <ul class="nav flex-column" id="sidebarTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#" data-tab="all-activities">
+                        <i class="bi bi-calendar-event-fill"></i>已有活动目录
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-tab="my-published">
+                        <i class="bi bi-person-check-fill"></i>我发布的活动
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="col-md-10 content-area" id="contentArea">
+            <div class="text-center text-muted py-5">请先登录...</div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let currentUser = null;
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await initUser();
+    if (!currentUser) return;
+    setupTabs();
+    renderAllActivities();
+});
+
+async function initUser() {
+    try {
+        const resp = await fetch('/api/user/current');
+        const result = await resp.json();
+        if (result.code === 200 && result.data) {
+            currentUser = result.data;
+            document.getElementById('userDropdown').style.display = 'block';
+            document.getElementById('loginLink').style.display = 'none';
+            document.getElementById('userNameDisplay').textContent = currentUser.name;
+            document.getElementById('contentArea').innerHTML = '';
+        }
+    } catch (e) {}
+}
+
+function setupTabs() {
+    const tabs = document.getElementById('sidebarTabs').querySelectorAll('.nav-link');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function(e) {
+            e.preventDefault();
+            tabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            const tabName = this.getAttribute('data-tab');
+            if (tabName === 'all-activities') renderAllActivities();
+            else if (tabName === 'my-published') renderMyPublished();
+        });
+    });
+}
+
+async function renderAllActivities() {
+    const area = document.getElementById('contentArea');
+    area.innerHTML = '<div class="text-center text-muted py-4"><div class="spinner-border"></div><p class="mt-2">加载活动列表...</p></div>';
+
+    const resp = await fetch('/api/activity/list');
+    const result = await resp.json();
+    if (result.code === 200 && result.data && result.data.length > 0) {
+        let html = '<h4 class="mb-4"><i class="bi bi-calendar-event-fill"></i> 已有活动目录</h4><div class="row">';
+        result.data.forEach(a => {
+            html += '<div class="col-md-6 mb-3"><div class="card activity-card h-100"><div class="card-body">';
+            html += '<h5 class="card-title">' + a.title + '</h5>';
+            html += '<p class="text-muted small mb-1">社团：' + (a.clubName || '未知') + ' | 发布人：' + (a.creatorName || '未知') + '</p>';
+            html += '<p class="text-muted small mb-1">地点：' + a.location + '</p>';
+            html += '<p class="text-muted small mb-1">时间：' + (a.startTime ? a.startTime.substring(0, 16) : '') + ' ~ ' + (a.endTime ? a.endTime.substring(0, 16) : '') + '</p>';
+            html += '<p class="text-muted small mb-1">报名：' + a.currentCount + '/' + (a.maxParticipants === 0 ? '不限' : a.maxParticipants) + '</p>';
+            html += '<span class="badge status-badge ' + getStatusClass(a.status) + '">' + getStatusText(a.status) + '</span>';
+            html += '<div class="mt-2">';
+            html += '<a href="/activity/detail/' + a.id + '" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i> 详情</a>';
+            if (currentUser && (currentUser.id === a.creatorId || currentUser.role === 'ADMIN')) {
+                html += '<button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteActivity(' + a.id + ')"><i class="bi bi-trash"></i> 删除</button>';
+            }
+            html += '</div></div></div></div>';
+        });
+        html += '</div>';
+        area.innerHTML = html;
+    } else {
+        area.innerHTML = '<h4 class="mb-4">已有活动目录</h4><div class="text-center text-muted py-5"><i class="bi bi-inbox" style="font-size:3rem;"></i><p class="mt-2">暂无活动</p></div>';
+    }
+}
+
+async function renderMyPublished() {
+    const area = document.getElementById('contentArea');
+    area.innerHTML = '<div class="text-center text-muted py-4"><div class="spinner-border"></div><p class="mt-2">加载我发布的活动...</p></div>';
+
+    const resp = await fetch('/api/activity/my-published');
+    const result = await resp.json();
+    if (result.code === 200 && result.data && result.data.length > 0) {
+        let html = '<h4 class="mb-4"><i class="bi bi-person-check-fill"></i> 我发布的活动</h4>';
+        for (const a of result.data) {
+            html += '<div class="card activity-card mb-4"><div class="card-header d-flex justify-content-between align-items-center">';
+            html += '<span><strong>' + a.title + '</strong> <span class="badge status-badge ' + getStatusClass(a.status) + '">' + getStatusText(a.status) + '</span></span>';
+            html += '<small class="text-muted">' + (a.startTime ? a.startTime.substring(0, 16) : '') + ' | ' + a.location + '</small>';
+            html += '</div><div class="card-body"><div class="row">';
+            html += '<div class="col-md-6"><p class="text-muted small mb-1">社团：' + (a.clubName || '未知') + '</p>';
+            html += '<p class="text-muted small mb-1">简介：' + (a.description || '无') + '</p>';
+            html += '<p class="text-muted small mb-1">报名人数：' + a.currentCount + '/' + (a.maxParticipants === 0 ? '不限' : a.maxParticipants) + '</p></div>';
+            html += '<div class="col-md-6"><div id="reg-section-' + a.id + '"><small class="text-muted">加载报名列表...</small></div></div>';
+            html += '</div></div>';
+            html += '<div class="card-footer"><div id="checkin-section-' + a.id + '"><small class="text-muted">加载签到记录...</small></div></div>';
+            html += '</div>';
+        }
+        area.innerHTML = html;
+
+        for (const a of result.data) {
+            loadRegistrations(a.id);
+            loadCheckins(a.id);
+        }
+    } else {
+        area.innerHTML = '<h4 class="mb-4">我发布的活动</h4><div class="text-center text-muted py-5"><i class="bi bi-inbox" style="font-size:3rem;"></i><p class="mt-2">您还没有发布任何活动</p><a href="/activity/create" class="btn btn-primary mt-3"><i class="bi bi-plus-lg"></i> 发布活动</a></div>';
+    }
+}
+
+async function loadRegistrations(activityId) {
+    const section = document.getElementById('reg-section-' + activityId);
+    if (!section) return;
+    try {
+        const resp = await fetch('/api/registration/activity/' + activityId);
+        const result = await resp.json();
+        if (result.code === 200 && result.data && result.data.length > 0) {
+            let html = '<h6>报名列表</h6><table class="table table-sm"><thead><tr><th>姓名</th><th>学号</th><th>时间</th><th>状态</th></tr></thead><tbody>';
+            result.data.forEach(r => {
+                html += '<tr><td>' + r.userName + '</td><td>' + r.studentNo + '</td><td>' + (r.registeredAt ? r.registeredAt.substring(0, 16) : '') + '</td><td>' + (r.status === 'REGISTERED' ? '<span class="badge bg-success">已报名</span>' : '<span class="badge bg-danger">已取消</span>') + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            section.innerHTML = html;
+        } else {
+            section.innerHTML = '<h6>报名列表</h6><small class="text-muted">暂无报名</small>';
+        }
+    } catch (e) {
+        section.innerHTML = '<small class="text-muted">加载失败</small>';
+    }
+}
+
+async function loadCheckins(activityId) {
+    const section = document.getElementById('checkin-section-' + activityId);
+    if (!section) return;
+    try {
+        const resp = await fetch('/api/checkin/activity/' + activityId);
+        const result = await resp.json();
+        if (result.code === 200 && result.data && result.data.length > 0) {
+            let html = '<h6>签到记录</h6><table class="table table-sm"><thead><tr><th>姓名</th><th>签到</th><th>签退</th></tr></thead><tbody>';
+            result.data.forEach(c => {
+                html += '<tr><td>' + c.userName + '</td><td>' + getCheckStatusBadge(c.checkinStatus) + (c.checkinTime ? '<br><small>' + c.checkinTime.substring(0, 16) + '</small>' : '') + '</td><td>' + getCheckStatusBadge(c.checkoutStatus) + (c.checkoutTime ? '<br><small>' + c.checkoutTime.substring(0, 16) + '</small>' : '') + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            section.innerHTML = html;
+        } else {
+            section.innerHTML = '<h6>签到记录</h6><small class="text-muted">暂无需签到记录</small>';
+        }
+    } catch (e) {
+        section.innerHTML = '<small class="text-muted">加载失败</small>';
+    }
+}
+
+async function deleteActivity(id) {
+    if (!confirm('确定要删除该活动吗？')) return;
+    const resp = await fetch('/api/activity/' + id, { method: 'DELETE' });
+    const result = await resp.json();
+    if (result.code === 200) {
+        showToast('删除成功', 'success');
+        renderAllActivities();
+    } else {
+        showToast(result.message, 'danger');
+    }
+}
+
+function getStatusClass(status) {
+    const map = { 'DRAFT': 'bg-secondary', 'PUBLISHED': 'bg-success', 'ONGOING': 'bg-primary', 'FINISHED': 'bg-info', 'CANCELLED': 'bg-danger' };
+    return map[status] || 'bg-secondary';
+}
+
+function getStatusText(status) {
+    const map = { 'DRAFT': '草稿', 'PUBLISHED': '已发布', 'ONGOING': '进行中', 'FINISHED': '已结束', 'CANCELLED': '已取消' };
+    return map[status] || status;
+}
+
+function getCheckStatusBadge(status) {
+    return status === 'CHECKED' ? '<span class="badge bg-success">已完成</span>' : '<span class="badge bg-warning">未完成</span>';
+}
+
+function logout() { window.location.href = '/logout'; }
+
+function showToast(message, type) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-' + type + ' alert-dismissible fade show';
+    toast.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+</body>
+</html>
