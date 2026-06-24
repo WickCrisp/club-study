@@ -1,0 +1,98 @@
+/* ============================================================
+   Design Tokens — F-PolyImage inspired
+   Indigo-Purple-Violet gradient spectrum + Glass surfaces
+   Warm Amber/Orange CTAs + Colored glow shadows
+   ============================================================ */
+
+:root {
+  /* === 主色系（Indigo-Violet-Purple 光谱） === */
+  --color-primary:        #6366F1;   /* Indigo 主色 */
+  --color-primary-light:  #818CF8;   /* Indigo 浅 */
+  --color-primary-dark:   #4F46E5;   /* Indigo 深 */
+  --color-primary-bg:     #EEF2FF;   /* Indigo 背景 */
+
+  --color-secondary:      #A855F7;   /* Purple 次要 */
+  --color-secondary-light:#C084FC;   /* Purple 浅 */
+  --color-secondary-dark: #9333EA;   /* Purple 深 */
+
+  --color-accent:         #8B5CF6;   /* Violet 点缀 */
+  --color-accent-light:   #A78BFA;   /* Violet 浅 */
+
+  /* === 暖色 CTA（Amber-Orange） === */
+  --color-cta:            #F59E0B;   /* Amber CTA */
+  --color-cta-hover:      #F97316;   /* Orange 悬停 */
+
+  /* === 表面色（暗色 + 玻璃） === */
+  --color-bg:             #F8FAFC;   /* 浅色页面底 */
+  --color-bg-dark:        #0F0F23;   /* 深色页面底 */
+  --color-surface:        #FFFFFF;   /* 卡片白底 */
+  --color-glass:          rgba(255, 255, 255, 0.7);    /* 玻璃卡片 */
+  --color-glass-border:   rgba(99, 102, 241, 0.15);     /* 玻璃边框 */
+  --color-glass-dark:     rgba(15, 15, 35, 0.75);       /* 暗色玻璃 */
+  --color-glass-dark-border: rgba(168, 85, 247, 0.2);   /* 暗色玻璃边框 */
+
+  /* === 文字色 === */
+  --color-text:           #1E1B4B;   /* 主文字 */
+  --color-text-secondary: #64748B;   /* 辅助 */
+  --color-text-muted:     #94A3B8;   /* 占位 */
+  --color-text-light:     #E2E8F0;   /* 深色背景文字 */
+
+  /* === 边框 === */
+  --color-border:         #E2E8F0;
+  --color-border-focus:   rgba(99, 102, 241, 0.4);
+
+  /* === 语义色 === */
+  --color-success:        #22C55E;
+  --color-warning:        #F59E0B;
+  --color-danger:         #EF4444;
+  --color-info:           #3B82F6;
+
+  /* === 发光阴影（彩色 glow） === */
+  --glow-indigo:   0 0 20px rgba(99, 102, 241, 0.25);
+  --glow-purple:   0 0 20px rgba(168, 85, 247, 0.25);
+  --glow-orange:   0 0 20px rgba(249, 115, 22, 0.25);
+  --glow-amber:    0 0 12px rgba(245, 158, 11, 0.25);
+
+  --shadow-sm:     0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md:     0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg:     0 12px 40px rgba(99, 102, 241, 0.12);
+  --shadow-xl:     0 25px 50px rgba(0, 0, 0, 0.18);
+  --shadow-card:   0 4px 24px rgba(99, 102, 241, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+
+  /* === 圆角 === */
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;      /* rounded-2xl */
+  --radius-xl:   24px;      /* rounded-3xl */
+  --radius-full: 9999px;
+
+  /* === 间距 === */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* === 动画时序 === */
+  --duration-press:  80ms;
+  --duration-hover:  150ms;
+  --duration-fade:   200ms;
+  --duration-slide:  300ms;
+  --duration-page:   300ms;
+  --ease-out:    cubic-bezier(0.0, 0.0, 0.2, 1.0);
+  --ease-in:     cubic-bezier(0.4, 0.0, 1.0, 1.0);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1.0);
+
+  /* === 字体 === */
+  --font-family: 'Inter', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-serif;
+  --font-size-xs:   12px;
+  --font-size-sm:   14px;
+  --font-size-base: 16px;
+  --font-size-lg:   18px;
+  --font-size-xl:   22px;
+  --font-size-2xl:  28px;
+  --font-size-3xl:  36px;
+  --line-height:    1.6;
+}

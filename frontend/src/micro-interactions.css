@@ -1,0 +1,201 @@
+/* ============================================================
+   Micro-interactions — Mobile apps, touchscreen UIs
+   Style #16: 150-300ms 动画 | 按压反馈 | 交错入场 | 触屏友好
+   ============================================================ */
+
+/* ---- 基础动画变量 ---- */
+:root {
+  --duration-micro: 150ms;   /* 微交互（按压反馈） */
+  --duration-fast: 200ms;     /* 快速过渡 */
+  --duration-normal: 250ms;   /* 标准过渡 */
+  --duration-slow: 350ms;     /* 页面切换 */
+  --ease-out: cubic-bezier(0.0, 0.0, 0.2, 1.0);    /* 入场 */
+  --ease-in: cubic-bezier(0.4, 0.0, 1.0, 1.0);      /* 出场 */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* 弹性 */
+}
+
+/* ---- 触屏目标最小 44×44pt ---- */
+.tap-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- 按钮按压反馈 ---- */
+.btn, .btn-primary, .btn-success, .btn-danger, .btn-warning,
+.btn-outline-primary, .btn-outline-warning, .btn-outline-danger,
+.btn-outline-info, .btn-sm, .nav-link {
+  transition: transform var(--duration-micro) var(--ease-out),
+              opacity var(--duration-micro) var(--ease-out);
+  touch-action: manipulation;    /* 禁用双击缩放，加快触屏响应 */
+}
+.btn:active, .btn-sm:active {
+  transform: scale(0.95);        /* 按压缩小 */
+  opacity: 0.85;
+}
+
+/* ---- 卡片按压反馈 ---- */
+.card[style*="cursor: pointer"]:active,
+.card[style*="cursor:pointer"]:active,
+a.card:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+}
+
+/* ---- 卡片悬停微动 ---- */
+.card {
+  transition: transform var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* ---- 列表交错入场 ---- */
+.list-stagger > * {
+  animation: staggerIn var(--duration-normal) var(--ease-out) both;
+}
+.list-stagger > *:nth-child(1)  { animation-delay: 0ms; }
+.list-stagger > *:nth-child(2)  { animation-delay: 40ms; }
+.list-stagger > *:nth-child(3)  { animation-delay: 80ms; }
+.list-stagger > *:nth-child(4)  { animation-delay: 120ms; }
+.list-stagger > *:nth-child(5)  { animation-delay: 160ms; }
+.list-stagger > *:nth-child(6)  { animation-delay: 200ms; }
+.list-stagger > *:nth-child(7)  { animation-delay: 240ms; }
+.list-stagger > *:nth-child(8)  { animation-delay: 280ms; }
+.list-stagger > *:nth-child(9)  { animation-delay: 320ms; }
+.list-stagger > *:nth-child(10) { animation-delay: 360ms; }
+
+@keyframes staggerIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- 淡入上滑 ---- */
+.fade-slide-up {
+  animation: fadeSlideUp var(--duration-normal) var(--ease-out) both;
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Vue Router 页面过渡 ---- */
+.page-enter-active {
+  animation: pageEnter var(--duration-slow) var(--ease-out);
+}
+.page-leave-active {
+  animation: pageLeave var(--duration-micro) var(--ease-in);
+}
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pageLeave {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ---- 骨架屏加载 ---- */
+.skeleton {
+  background: linear-gradient(90deg, #e8e8e8 25%, #f5f5f5 50%, #e8e8e8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+  min-height: 1em;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ---- Toast 弹入 ---- */
+.toast-container .alert {
+  animation: toastSlideIn var(--duration-fast) var(--ease-spring);
+}
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(80px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+/* ---- 涟漪效果（Material Ripple） ---- */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+.ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 10%, transparent 10%);
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity var(--duration-micro), transform var(--duration-micro);
+}
+.ripple:active::after {
+  opacity: 1;
+  transform: scale(4);
+  transition: transform var(--duration-fast) var(--ease-out), opacity var(--duration-micro);
+}
+
+/* ---- 导航链接底部指示器 ---- */
+.nav-link {
+  position: relative;
+}
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  transition: width var(--duration-normal) var(--ease-out),
+              left var(--duration-normal) var(--ease-out);
+}
+.nav-link:hover::after,
+.nav-link.active::after,
+.nav-link.router-link-exact-active::after {
+  width: 60%;
+  left: 20%;
+}
+
+/* ---- 表单聚焦动效 ---- */
+.form-control, .form-select {
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+.form-control:focus, .form-select:focus {
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+/* ---- Badge 状态变化 ---- */
+.badge {
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+
+/* ---- 表格行悬停 ---- */
+.table-hover tbody tr {
+  transition: background-color var(--duration-micro) var(--ease-out);
+}
+
+/* ---- 系统减弱动画 ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import com.crisp.demo.common.BusinessException;
 
 @Service
 @RequiredArgsConstructor
@@ -18,7 +19,7 @@ public class ActivitySummaryServiceImpl implements ActivitySummaryService {
     public ActivitySummary findById(Long id) {
         ActivitySummary summary = summaryMapper.findById(id);
         if (summary == null) {
-            throw new RuntimeException("活动总结不存在");
+            throw new BusinessException("活动总结不存在");
         }
         return summary;
     }
@@ -37,7 +38,7 @@ public class ActivitySummaryServiceImpl implements ActivitySummaryService {
     public ActivitySummary create(ActivitySummary summary) {
         ActivitySummary existSummary = summaryMapper.findByActivityId(summary.getActivityId());
         if (existSummary != null) {
-            throw new RuntimeException("该活动已有总结，请勿重复创建");
+            throw new BusinessException("该活动已有总结，请勿重复创建");
         }
         summaryMapper.insert(summary);
         return summary;
@@ -47,7 +48,7 @@ public class ActivitySummaryServiceImpl implements ActivitySummaryService {
     public ActivitySummary update(ActivitySummary summary) {
         ActivitySummary existSummary = summaryMapper.findById(summary.getId());
         if (existSummary == null) {
-            throw new RuntimeException("活动总结不存在");
+            throw new BusinessException("活动总结不存在");
         }
         summaryMapper.update(summary);
         return summaryMapper.findById(summary.getId());

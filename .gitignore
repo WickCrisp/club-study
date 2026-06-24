@@ -31,3 +31,29 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Node ###
+node_modules/
+**/node_modules/
+**/package-lock.json
+
+### Boilerplate ###
+frontend/public/favicon.svg
+frontend/public/icons.svg
+
+### Sensitive Config ###
+src/main/resources/application.properties
+applicationexample.properties
+
+### Claude ###
+.claude/
+
+### Test ###
+src/test/
+
+### Docs ###
+problem.md
+
+### Design Toolkit ###
+ui-ux-pro-max-skill-2.5.0/
+

@@ -10,6 +10,8 @@ import org.springframework.util.DigestUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import com.crisp.demo.common.BusinessException;
+
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -20,11 +22,11 @@ public class UserServiceImpl implements UserService {
     public User login(String studentNo, String password) {
         User user = userMapper.findByStudentNo(studentNo);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
         String encryptedPassword = DigestUtils.md5DigestAsHex(password.getBytes(StandardCharsets.UTF_8));
         if (!encryptedPassword.equals(user.getPassword())) {
-            throw new RuntimeException("密码错误");
+            throw new BusinessException("密码错误");
         }
         return user;
     }
@@ -33,7 +35,7 @@ public class UserServiceImpl implements UserService {
     public User register(User user) {
         User existUser = userMapper.findByStudentNo(user.getStudentNo());
         if (existUser != null) {
-            throw new RuntimeException("该学号已被注册");
+            throw new BusinessException("该学号已被注册");
         }
         user.setPassword(DigestUtils.md5DigestAsHex(user.getPassword().getBytes(StandardCharsets.UTF_8)));
         if (user.getRole() == null || user.getRole().isEmpty()) {
@@ -47,7 +49,7 @@ public class UserServiceImpl implements UserService {
     public User findById(Long id) {
         User user = userMapper.findById(id);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
         return user;
     }
@@ -76,11 +78,11 @@ public class UserServiceImpl implements UserService {
     public boolean updatePassword(Long id, String oldPassword, String newPassword) {
         User user = userMapper.findById(id);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
         String encryptedOld = DigestUtils.md5DigestAsHex(oldPassword.getBytes(StandardCharsets.UTF_8));
         if (!encryptedOld.equals(user.getPassword())) {
-            throw new RuntimeException("原密码错误");
+            throw new BusinessException("原密码错误");
         }
         String encryptedNew = DigestUtils.md5DigestAsHex(newPassword.getBytes(StandardCharsets.UTF_8));
         return userMapper.updatePassword(id, encryptedNew) > 0;

@@ -19,11 +19,11 @@ public interface ClubMapper {
     @Select("SELECT c.*, u.name AS leader_name FROM club c LEFT JOIN user u ON c.leader_id = u.id WHERE c.leader_id = #{leaderId} ORDER BY c.created_at DESC")
     List<Club> findByLeaderId(Long leaderId);
 
-    @Insert("INSERT INTO club(name, description, logo_url, leader_id, status) VALUES(#{name}, #{description}, #{logoUrl}, #{leaderId}, #{status})")
+    @Insert("INSERT INTO club(name, description, leader_id, status) VALUES(#{name}, #{description}, #{leaderId}, #{status})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(Club club);
 
-    @Update("UPDATE club SET name=#{name}, description=#{description}, logo_url=#{logoUrl}, leader_id=#{leaderId}, status=#{status} WHERE id=#{id}")
+    @Update("UPDATE club SET name=#{name}, description=#{description}, leader_id=#{leaderId}, status=#{status} WHERE id=#{id}")
     int update(Club club);
 
     @Delete("DELETE FROM club WHERE id=#{id}")
