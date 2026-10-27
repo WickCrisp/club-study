@@ -1,164 +1,415 @@
 <template>
-  <div class="container">
-    <div class="page-header">
-      <h2>社团浏览</h2>
+  <div class="club-page">
+    <div class="page-head">
+      <div>
+        <h2>社团浏览</h2>
+        <p>共 {{ clubs.length }} 个社团，卡片上的图文就是他们最新的社团风采</p>
+      </div>
+      <div class="head-right">
+        <el-input
+          v-model="keyword"
+          placeholder="搜索社团名称"
+          clearable
+          style="width: 240px"
+          @keyup.enter="doSearch"
+          @clear="loadClubs"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-button type="primary" :icon="Search" @click="doSearch">搜索</el-button>
+      </div>
     </div>
 
-    <ul class="nav nav-tabs mb-4">
-      <li class="nav-item">
-        <a class="nav-link" :class="{ active: tab === 'all' }" href="#" @click.prevent="tab = 'all'">
-          本校社团
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" :class="{ active: tab === 'my' }" href="#" @click.prevent="tab = 'my'">
-          我参加的社团
-        </a>
-      </li>
-    </ul>
+    <el-row v-loading="loading" :gutter="16">
+      <el-col v-for="club in clubs" :key="club.id" :xs="24" :sm="12" :lg="8" class="col">
+        <el-card shadow="hover" :body-style="{ padding: '0' }" class="club-card" @click="viewClub(club.id)">
+          <div class="cover" :style="{ background: coverColor(club.id) }">
+            <img
+              v-if="latest(club.id) && latest(club.id).coverUrl"
+              :src="latest(club.id).coverUrl"
+              class="cover-img"
+              :alt="club.name"
+            />
+            <span v-else class="cover-char">{{ (club.name || '社').slice(0, 1) }}</span>
 
-    <!-- 我参加的社团 -->
-    <div v-if="tab === 'my'">
-      <div v-if="myClubs.length > 0" class="row">
-        <div class="col-md-4 mb-3" v-for="m in myClubs" :key="m.id">
-          <div class="card h-100">
-            <div class="card-body">
-              <h5 class="card-title">{{ m.clubName }}</h5>
-              <p class="text-muted small">
-                角色：<span class="badge" :class="roleBadge(m.role)">{{ roleText(m.role) }}</span>
-              </p>
-              <span class="badge" :class="memberStatusBadge(m.status)">
-                {{ memberStatusText(m.status) }}
-              </span>
-              <div class="mt-3">
-                <button class="btn btn-sm btn-outline-primary me-1" @click="viewClub(m.clubId)">查看详情</button>
-                <button v-if="m.status === 'APPROVED'" class="btn btn-sm btn-outline-warning" @click="handleRequestQuit(m)">申请退出</button>
-                <span v-if="m.status === 'QUIT_PENDING'" class="text-warning small">退出审核中</span>
-              </div>
+            <span class="status-dot" :class="club.status === 'ACTIVE' ? 'on' : 'off'">
+              {{ club.status === 'ACTIVE' ? '活跃' : '已解散' }}
+            </span>
+            <span v-if="countOf(club.id)" class="showcase-count">风采 {{ countOf(club.id) }}</span>
+          </div>
+
+          <div class="card-body">
+            <div class="title-row">
+              <h3>{{ club.name }}</h3>
+              <span v-if="club.categoryName" class="category">{{ club.categoryName }}</span>
+            </div>
+
+            <p class="desc">{{ club.description || '这个社团还没有填写简介' }}</p>
+
+            <div v-if="latest(club.id)" class="showcase" @click.stop="openShowcase(club)">
+              <el-icon class="sc-icon"><Picture /></el-icon>
+              <span class="sc-title">{{ latest(club.id).title }}</span>
+              <span class="sc-date">{{ formatDate(latest(club.id).createdAt) }}</span>
+            </div>
+            <div v-else class="showcase empty">
+              <el-icon class="sc-icon"><Picture /></el-icon>
+              <span class="sc-title">还没有发布风采</span>
+            </div>
+
+            <div class="card-footer">
+              <span class="leader">负责人 {{ club.leaderName || '未指定' }}</span>
+              <el-button link type="primary" :disabled="!countOf(club.id)" @click.stop="openShowcase(club)">
+                查看风采
+              </el-button>
             </div>
           </div>
-        </div>
-      </div>
-      <div v-else class="empty-state">
-        <div class="icon"></div>
-        <p>还未加入任何社团</p>
-        <button class="btn btn-primary mt-2" @click="tab = 'all'">去浏览社团</button>
-      </div>
-    </div>
+        </el-card>
+      </el-col>
+    </el-row>
 
-    <!-- 本校社团 -->
-    <div v-if="tab === 'all'">
-      <div class="row mb-3">
-        <div class="col-md-4 search-box">
-          <div class="input-group">
-            <input type="text" class="form-control" v-model="keyword" @keyup.enter="doSearch" placeholder="搜索社团名称..." />
-            <button class="btn btn-primary" @click="doSearch">搜索</button>
+    <el-empty v-if="!loading && clubs.length === 0" description="没有找到匹配的社团" />
+
+    <el-dialog
+      v-model="showcaseVisible"
+      :title="showcaseClub ? showcaseClub.name + ' · 社团风采' : '社团风采'"
+      width="620px"
+      align-center
+    >
+      <div class="sc-list">
+        <div v-for="s in currentShowcases" :key="s.id" class="sc-item">
+          <img v-if="s.coverUrl" :src="s.coverUrl" class="sc-img" :alt="s.title" />
+          <div class="sc-body">
+            <h4>{{ s.title }}</h4>
+            <p>{{ s.content }}</p>
+            <span class="sc-time">{{ formatDate(s.createdAt) }}</span>
           </div>
         </div>
+        <el-empty v-if="currentShowcases.length === 0" description="这个社团还没有发布风采" :image-size="80" />
       </div>
-
-      <div v-if="allClubs.length > 0" class="row">
-        <div class="col-md-4 mb-3" v-for="club in allClubs" :key="club.id">
-          <div class="card h-100">
-            <div class="card-body">
-              <h5 class="card-title">{{ club.name }}</h5>
-              <p class="text-muted small">{{ club.description || '暂无简介' }}</p>
-              <p class="text-muted small">负责人：{{ club.leaderName || '未指定' }}</p>
-              <span class="badge" :class="club.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary'">
-                {{ club.status === 'ACTIVE' ? '活跃' : '已解散' }}
-              </span>
-              <div class="mt-3">
-                <button class="btn btn-sm btn-outline-primary" @click="viewClub(club.id)">查看详情</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div v-else class="empty-state">
-        <div class="icon"></div>
-        <p>暂无社团</p>
-      </div>
-    </div>
-
-    <div class="toast-container">
-      <div v-if="toast.show" class="alert alert-dismissible fade show" :class="'alert-' + toast.type">
-        {{ toast.message }}
-        <button type="button" class="btn-close" @click="toast.show = false"></button>
-      </div>
-    </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { Search, Picture } from '@element-plus/icons-vue'
 import api from '../api'
 
 const router = useRouter()
-const tab = ref('my')
-const myClubs = ref([])
-const allClubs = ref([])
+
+const clubs = ref([])
+const showcases = ref([])
 const keyword = ref('')
-const toast = reactive({ show: false, message: '', type: 'danger' })
+const loading = ref(false)
 
-const showToast = (message, type) => {
-  toast.show = true; toast.message = message; toast.type = type
-  setTimeout(() => toast.show = false, 3000)
-}
+const showcaseVisible = ref(false)
+const showcaseClub = ref(null)
 
-const loadMyClubs = async () => {
-  try {
-    const result = await api.get('/club-member/my')
-    if (result.code === 200) {
-      myClubs.value = (result.data || []).filter(m =>
-        m.status === 'APPROVED' || m.status === 'QUIT_PENDING'
-      )
-    }
-  } catch (e) { showToast('加载我的社团失败', 'danger') }
-}
+// 没封面时用固定色板兜底，保证一屏卡片不会花
+const palette = ['#1f2d3d', '#2c3e50', '#33415c', '#3d3b5e', '#2f4858', '#443c4a']
+const coverColor = (id) => palette[(id || 0) % palette.length]
 
-const loadAllClubs = async () => {
+const showcaseMap = computed(() => {
+  const map = {}
+  showcases.value.forEach(s => {
+    if (!s.clubId) return
+    if (!map[s.clubId]) map[s.clubId] = []
+    map[s.clubId].push(s)
+  })
+  Object.keys(map).forEach(k => {
+    map[k].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+  })
+  return map
+})
+
+const countOf = (clubId) => (showcaseMap.value[clubId] || []).length
+const latest = (clubId) => (showcaseMap.value[clubId] || [])[0] || null
+const currentShowcases = computed(() => (showcaseClub.value ? showcaseMap.value[showcaseClub.value.id] || [] : []))
+
+const formatDate = (t) => (t ? t.substring(0, 10) : '')
+
+const loadClubs = async () => {
+  loading.value = true
   try {
     const result = await api.get('/club/list')
-    if (result.code === 200) allClubs.value = result.data || []
-  } catch (e) { showToast('加载社团列表失败', 'danger') }
+    if (result.code === 200) {
+      clubs.value = result.data || []
+      keyword.value = ''
+    }
+  } catch (e) {
+    ElMessage.error('加载社团列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadShowcases = async () => {
+  try {
+    const result = await api.get('/club-showcase/list')
+    if (result.code === 200) showcases.value = result.data || []
+  } catch (e) {
+    showcases.value = []
+  }
 }
 
 const doSearch = async () => {
+  const kw = keyword.value.trim()
+  if (!kw) return loadClubs()
+  loading.value = true
   try {
-    const url = keyword.value ? `/club/search?keyword=${encodeURIComponent(keyword.value)}` : '/club/list'
-    const result = await api.get(url)
-    if (result.code === 200) allClubs.value = result.data || []
-  } catch (e) { showToast('搜索失败', 'danger') }
+    const result = await api.get(`/club/search?keyword=${encodeURIComponent(kw)}`)
+    if (result.code === 200) clubs.value = result.data || []
+    else ElMessage.error(result.message || '搜索失败')
+  } catch (e) {
+    ElMessage.error('搜索失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const viewClub = (id) => router.push(`/club/detail/${id}`)
 
-const handleRequestQuit = async (member) => {
-  if (!confirm(`确定申请退出「${member.clubName}」吗？需要管理员审批。`)) return
-  try {
-    const result = await api.post(`/club-member/request-quit/${member.id}`)
-    if (result.code === 200) { showToast('退出申请已提交', 'success'); loadMyClubs() }
-    else showToast(result.message, 'danger')
-  } catch (e) { showToast('操作失败', 'danger') }
+const openShowcase = (club) => {
+  if (!countOf(club.id)) return
+  showcaseClub.value = club
+  showcaseVisible.value = true
 }
 
-const roleBadge = (r) => {
-  const map = { LEADER: 'bg-danger', VICE_LEADER: 'bg-warning', MEMBER: 'bg-primary' }
-  return map[r] || 'bg-secondary'
-}
-const roleText = (r) => {
-  const map = { LEADER: '负责人', VICE_LEADER: '副负责人', MEMBER: '成员' }
-  return map[r] || r
-}
-const memberStatusBadge = (s) => {
-  const map = { APPROVED: 'bg-success', QUIT_PENDING: 'bg-warning text-dark' }
-  return map[s] || 'bg-secondary'
-}
-const memberStatusText = (s) => {
-  const map = { APPROVED: '已加入', QUIT_PENDING: '退出待审' }
-  return map[s] || s
-}
-
-onMounted(() => { loadMyClubs(); loadAllClubs() })
+onMounted(() => {
+  loadClubs()
+  loadShowcases()
+})
 </script>
+
+<style scoped>
+.club-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.page-head h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.page-head p {
+  margin: 0;
+  font-size: 13px;
+  color: #8a94a6;
+}
+
+.head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.col {
+  margin-bottom: 16px;
+}
+
+.club-card {
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+
+.club-card:hover {
+  transform: translateY(-2px);
+}
+
+.cover {
+  position: relative;
+  height: 132px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cover-char {
+  font-size: 40px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 2px;
+}
+
+.status-dot {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.status-dot.off {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.showcase-count {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.card-body {
+  padding: 14px 16px 12px;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-row h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1f2d3d;
+}
+
+.category {
+  font-size: 11px;
+  color: #8a94a6;
+  background: #f2f4f7;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.desc {
+  margin: 8px 0 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #8a94a6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 38px;
+}
+
+.showcase {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #f7f9fc;
+  font-size: 12px;
+  color: #4a5568;
+  margin-bottom: 10px;
+}
+
+.showcase:not(.empty):hover {
+  background: #eef2f7;
+}
+
+.showcase.empty {
+  color: #b6bfcc;
+}
+
+.sc-icon {
+  color: #8a94a6;
+  flex: none;
+}
+
+.sc-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sc-date {
+  color: #b6bfcc;
+  flex: none;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #f2f4f7;
+  padding-top: 10px;
+}
+
+.leader {
+  font-size: 12px;
+  color: #8a94a6;
+}
+
+.sc-list {
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.sc-item {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid #f2f4f7;
+}
+
+.sc-item:last-child {
+  border-bottom: none;
+}
+
+.sc-img {
+  width: 140px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex: none;
+}
+
+.sc-body h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2d3d;
+}
+
+.sc-body p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #6b7688;
+}
+
+.sc-time {
+  font-size: 12px;
+  color: #b6bfcc;
+}
+</style>

@@ -1,0 +1,40 @@
+/**
+ * 管理端页面通用骨架
+ *
+ * 所有内容页统一用 .app-page 包裹，标题区统一用 .page-head，
+ * 右侧操作区统一用 .head-actions，避免每页各写一份导致间距不一致。
+ */
+.app-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.page-head h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.page-head p {
+  margin: 0;
+  font-size: 13px;
+  color: #8a94a6;
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}

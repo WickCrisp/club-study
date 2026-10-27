@@ -1,214 +1,340 @@
 <template>
-  <div class="container">
-    <div class="page-header d-flex justify-content-between align-items-center">
-      <h2>社团管理</h2>
-      <button class="btn btn-primary" @click="showCreateModal">+ 创建社团</button>
-    </div>
-
-    <div class="row mb-3">
-      <div class="col-md-4 search-box">
-        <div class="input-group">
-          <input type="text" class="form-control" v-model="keyword" @keyup.enter="doSearch" placeholder="搜索社团名称..." />
-          <button class="btn btn-primary" @click="doSearch">搜索</button>
-        </div>
+  <div class="app-page">
+    <div class="page-head">
+      <div>
+        <h2>社团管理</h2>
+        <p>共 {{ clubs.length }} 个社团，可查看成员、调整负责人与分类</p>
+      </div>
+      <div class="head-actions">
+        <el-input
+          v-model="keyword"
+          placeholder="搜索社团名称"
+          clearable
+          style="width: 220px"
+          @keyup.enter="doSearch"
+          @clear="loadClubs"
+        >
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+        <el-button :icon="Search" @click="doSearch">搜索</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreate">创建社团</el-button>
       </div>
     </div>
 
-    <div v-if="clubs.length > 0" class="row">
-      <div class="col-md-4 mb-3" v-for="club in clubs" :key="club.id">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title">{{ club.name }}</h5>
-            <p class="text-muted small">{{ club.description || '暂无简介' }}</p>
-            <p class="text-muted small">负责人：{{ club.leaderName || '未指定' }}</p>
-            <span class="badge" :class="club.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary'">
-              {{ club.status === 'ACTIVE' ? '活跃' : '已解散' }}
-            </span>
-            <div class="mt-3 action-buttons">
-              <button class="btn btn-sm btn-outline-info me-1" @click="toggleDetail(club)">详情</button>
-              <button class="btn btn-sm btn-outline-warning me-1" @click="editClub(club)">编辑</button>
-              <button class="btn btn-sm btn-outline-danger" @click="confirmDelete(club.id)">删除</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- 社团详情展开 -->
-    <div v-if="detailClub" class="card mb-4 fade-slide-up">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span>{{ detailClub.name }} — 详细信息</span>
-        <button class="btn btn-sm btn-outline-secondary" @click="detailClub = null">关闭</button>
-      </div>
-      <div class="card-body">
-        <div class="row mb-3">
-          <div class="col-md-3"><strong>社团名称：</strong>{{ detailClub.name }}</div>
-          <div class="col-md-3"><strong>负责人：</strong>{{ detailClub.leaderName || '未指定' }}</div>
-          <div class="col-md-3"><strong>状态：</strong>{{ detailClub.status === 'ACTIVE' ? '活跃' : '已解散' }}</div>
-          <div class="col-md-3"><strong>成员数：</strong>{{ detailMembers.length }}</div>
-        </div>
-        <p><strong>简介：</strong>{{ detailClub.description || '暂无简介' }}</p>
-        <h6 class="mt-3">成员列表</h6>
-        <div v-if="detailMembers.length > 0">
-          <table class="table table-sm">
-            <thead><tr><th>姓名</th><th>学号</th><th>角色</th><th>状态</th><th>加入时间</th></tr></thead>
-            <tbody>
-              <tr v-for="m in detailMembers" :key="m.id">
-                <td>{{ m.userName }}</td>
-                <td>{{ m.studentNo }}</td>
-                <td>{{ roleText(m.role) }}</td>
-                <td><span class="badge" :class="statusBadge(m.status)">{{ statusLabel(m.status) }}</span></td>
-                <td>{{ m.joinedAt || '-' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-else class="text-muted">暂无成员</div>
-      </div>
-    </div>
+    <el-card shadow="never">
+      <el-table
+        v-loading="loading"
+        :data="clubs"
+        stripe
+        border
+        :header-cell-style="{ background: '#f7f9fc', color: '#4a5568', fontWeight: 600 }"
+      >
+        <el-table-column label="社团" min-width="220">
+          <template #default="{ row }">
+            <div class="club-name">{{ row.name }}</div>
+            <div class="club-sub">{{ row.categoryName || '未分类' }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="负责人" width="130">
+          <template #default="{ row }">
+            <span :class="{ muted: !row.leaderName }">{{ row.leaderName || '未指定' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="110" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'" effect="light" round>
+              {{ row.status === 'ACTIVE' ? '活跃' : '已解散' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建时间" width="130">
+          <template #default="{ row }">{{ (row.createdAt || '').substring(0, 10) || '—' }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="200" align="center">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="openDetail(row)">详情</el-button>
+            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+            <el-button link type="danger" @click="remove(row)">删除</el-button>
+          </template>
+        </el-table-column>
 
-    <div v-else class="empty-state">
-      <div class="icon"></div>
-      <p>暂无社团，点击上方按钮创建</p>
-    </div>
+        <template #empty>
+          <el-empty description="还没有社团，点右上角创建" :image-size="90" />
+        </template>
+      </el-table>
+    </el-card>
 
-    <!-- 创建/编辑模态框 -->
-    <div class="modal fade" ref="modalRef" tabindex="-1">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">{{ isEdit ? '编辑社团' : '创建社团' }}</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <div class="mb-3">
-              <label class="form-label">社团名称</label>
-              <input type="text" class="form-control" v-model="form.name" placeholder="请输入社团名称" />
-            </div>
-            <div class="mb-3">
-              <label class="form-label">社团简介</label>
-              <textarea class="form-control" v-model="form.description" rows="3" placeholder="请输入简介"></textarea>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">负责人学号</label>
-              <input type="text" class="form-control" v-model="form.leaderStudentNo" placeholder="请输入负责人的学号" />
-            </div>
-            <div class="mb-3">
-              <label class="form-label">状态</label>
-              <select class="form-select" v-model="form.status">
-                <option value="ACTIVE">活跃</option>
-                <option value="DISBANDED">已解散</option>
-              </select>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-            <button type="button" class="btn btn-primary" @click="handleSubmit" :disabled="loading">
-              {{ loading ? '保存中...' : '保存' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <el-dialog
+      v-model="formVisible"
+      :title="form.id ? '编辑社团' : '创建社团'"
+      width="480px"
+      align-center
+      modal-class="app-modal-overlay"
+      :close-on-click-modal="false"
+    >
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
+        <el-form-item label="社团名称" prop="name">
+          <el-input v-model="form.name" placeholder="如：算法竞赛社" maxlength="100" show-word-limit />
+        </el-form-item>
+        <el-form-item label="所属分类">
+          <el-select v-model="form.categoryId" placeholder="选择分类" clearable style="width: 100%">
+            <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="社团简介">
+          <el-input v-model="form.description" type="textarea" :rows="3" maxlength="200" show-word-limit
+                    placeholder="一句话说明这个社团做什么" />
+        </el-form-item>
+        <el-form-item label="负责人学号">
+          <el-input v-model="form.leaderStudentNo" placeholder="留空则沿用原负责人（新建时为你自己）" clearable />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-radio-group v-model="form.status">
+            <el-radio value="ACTIVE">活跃</el-radio>
+            <el-radio value="DISBANDED">已解散</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
 
-    <div class="toast-container">
-      <div v-if="toast.show" class="alert alert-dismissible fade show" :class="'alert-' + toast.type">
-        {{ toast.message }}
-        <button type="button" class="btn-close" @click="toast.show = false"></button>
-      </div>
-    </div>
+      <template #footer>
+        <el-button @click="formVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="submit">{{ form.id ? '保存' : '创建' }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-drawer v-model="drawerVisible" :title="detailClub ? detailClub.name : '社团详情'" size="560px">
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="负责人">{{ detailClub ? (detailClub.leaderName || '未指定') : '—' }}</el-descriptions-item>
+        <el-descriptions-item label="状态">
+          {{ detailClub && detailClub.status === 'ACTIVE' ? '活跃' : '已解散' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="分类">{{ (detailClub && detailClub.categoryName) || '未分类' }}</el-descriptions-item>
+        <el-descriptions-item label="成员数">{{ approvedCount }}</el-descriptions-item>
+        <el-descriptions-item label="简介" :span="2">
+          {{ (detailClub && detailClub.description) || '暂无简介' }}
+        </el-descriptions-item>
+      </el-descriptions>
+
+      <div class="drawer-section">成员列表</div>
+      <el-table v-loading="memberLoading" :data="detailMembers" size="small" border>
+        <el-table-column prop="userName" label="姓名" width="90" />
+        <el-table-column prop="studentNo" label="学号" width="130" />
+        <el-table-column label="角色" width="100">
+          <template #default="{ row }">{{ roleText(row.role) }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="statusType(row.status)" size="small" effect="light">{{ statusText(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="加入时间">
+          <template #default="{ row }">{{ (row.joinedAt || '').substring(0, 10) || '—' }}</template>
+        </el-table-column>
+        <template #empty>
+          <el-empty description="暂无成员" :image-size="70" />
+        </template>
+      </el-table>
+    </el-drawer>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Plus } from '@element-plus/icons-vue'
 import api from '../api'
 
 const clubs = ref([])
+const categories = ref([])
 const keyword = ref('')
 const loading = ref(false)
-const isEdit = ref(false)
-const modalRef = ref(null)
-const toast = reactive({ show: false, message: '', type: 'danger' })
+
+const formVisible = ref(false)
+const saving = ref(false)
+const formRef = ref(null)
+const form = reactive({ id: null, name: '', categoryId: null, description: '', leaderStudentNo: '', status: 'ACTIVE' })
+
+const drawerVisible = ref(false)
 const detailClub = ref(null)
 const detailMembers = ref([])
-let modalInstance = null
+const memberLoading = ref(false)
 
-const form = reactive({ id: null, name: '', description: '', leaderStudentNo: '', status: 'ACTIVE' })
+// 成员数只算审批通过的，待审核的不计入
+const approvedCount = computed(() => detailMembers.value.filter(m => m.status === 'APPROVED').length)
 
-const showToast = (message, type) => {
-  toast.show = true; toast.message = message; toast.type = type
-  setTimeout(() => toast.show = false, 3000)
+const rules = {
+  name: [
+    { required: true, message: '请输入社团名称', trigger: 'blur' },
+    { max: 100, message: '名称不超过 100 字', trigger: 'blur' }
+  ]
 }
 
+const roleText = (r) => ({ LEADER: '负责人', VICE_LEADER: '副负责人', MEMBER: '成员' }[r] || r)
+const statusText = (s) => ({
+  PENDING: '待审核', APPROVED: '已通过', REJECTED: '已拒绝', QUIT: '已退出', QUIT_PENDING: '退出待审'
+}[s] || s)
+const statusType = (s) => ({
+  APPROVED: 'success', PENDING: 'warning', QUIT_PENDING: 'warning', REJECTED: 'danger', QUIT: 'info'
+}[s] || 'info')
+
 const loadClubs = async () => {
+  loading.value = true
   try {
     const result = await api.get('/club/list')
-    if (result.code === 200) clubs.value = result.data || []
-  } catch (e) { showToast('加载失败', 'danger') }
+    if (result.code === 200) {
+      clubs.value = result.data || []
+      keyword.value = ''
+    } else {
+      ElMessage.error(result.message || '加载失败')
+    }
+  } catch (e) {
+    ElMessage.error('加载社团失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadCategories = async () => {
+  try {
+    const result = await api.get('/club-category/list')
+    if (result.code === 200) categories.value = result.data || []
+  } catch (e) {
+    categories.value = []
+  }
 }
 
 const doSearch = async () => {
-  try {
-    const url = keyword.value ? `/club/search?keyword=${encodeURIComponent(keyword.value)}` : '/club/list'
-    const result = await api.get(url)
-    if (result.code === 200) clubs.value = result.data || []
-  } catch (e) { showToast('搜索失败', 'danger') }
-}
-
-const showCreateModal = () => {
-  isEdit.value = false
-  Object.assign(form, { id: null, name: '', description: '', leaderStudentNo: '', status: 'ACTIVE' })
-  modalInstance.show()
-}
-
-const editClub = (club) => {
-  isEdit.value = true
-  Object.assign(form, { id: club.id, name: club.name, description: club.description || '', leaderStudentNo: '', status: club.status || 'ACTIVE' })
-  modalInstance.show()
-}
-
-const handleSubmit = async () => {
+  const kw = keyword.value.trim()
+  if (!kw) return loadClubs()
   loading.value = true
   try {
-    const payload = { ...form }
-    const result = isEdit.value
+    const result = await api.get(`/club/search?keyword=${encodeURIComponent(kw)}`)
+    if (result.code === 200) clubs.value = result.data || []
+    else ElMessage.error(result.message || '搜索失败')
+  } catch (e) {
+    ElMessage.error('搜索失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const openCreate = () => {
+  Object.assign(form, { id: null, name: '', categoryId: null, description: '', leaderStudentNo: '', status: 'ACTIVE' })
+  formVisible.value = true
+}
+
+const openEdit = (row) => {
+  Object.assign(form, {
+    id: row.id,
+    name: row.name,
+    categoryId: row.categoryId || null,
+    description: row.description || '',
+    leaderStudentNo: '',
+    status: row.status || 'ACTIVE'
+  })
+  formVisible.value = true
+}
+
+const submit = async () => {
+  try {
+    await formRef.value.validate()
+  } catch (e) {
+    return
+  }
+
+  saving.value = true
+  try {
+    const payload = {
+      id: form.id,
+      name: form.name.trim(),
+      categoryId: form.categoryId,
+      description: form.description,
+      leaderStudentNo: form.leaderStudentNo.trim(),
+      status: form.status
+    }
+    const result = form.id
       ? await api.put('/club/update', payload)
       : await api.post('/club/create', payload)
+
     if (result.code === 200) {
-      showToast(isEdit.value ? '更新成功' : '创建成功', 'success')
-      modalInstance.hide()
+      ElMessage.success(form.id ? '更新成功' : '创建成功')
+      formVisible.value = false
       loadClubs()
     } else {
-      showToast(result.message, 'danger')
+      ElMessage.error(result.message || '保存失败')
     }
-  } catch (e) { showToast('操作失败', 'danger') }
-  finally { loading.value = false }
+  } catch (e) {
+    ElMessage.error('保存失败')
+  } finally {
+    saving.value = false
+  }
 }
 
-const toggleDetail = async (club) => {
-  if (detailClub.value?.id === club.id) { detailClub.value = null; detailMembers.value = []; return }
-  detailClub.value = club
+const openDetail = async (row) => {
+  detailClub.value = row
+  detailMembers.value = []
+  drawerVisible.value = true
+  memberLoading.value = true
   try {
-    const res = await api.get(`/club-member/club/${club.id}`)
-    detailMembers.value = res.code === 200 ? (res.data || []) : []
-  } catch (e) { detailMembers.value = [] }
+    const result = await api.get(`/club-member/club/${row.id}`)
+    if (result.code === 200) detailMembers.value = result.data || []
+  } catch (e) {
+    detailMembers.value = []
+  } finally {
+    memberLoading.value = false
+  }
 }
 
-const statusLabel = (s) => ({ PENDING:'待审核', APPROVED:'已通过', REJECTED:'已拒绝', QUIT:'已退出', QUIT_PENDING:'退出待审' }[s]||s)
-const statusBadge = (s) => ({ APPROVED:'bg-success', PENDING:'bg-warning text-dark', QUIT_PENDING:'bg-warning text-dark', REJECTED:'bg-danger', QUIT:'bg-secondary' }[s]||'bg-secondary')
-const roleText = (r) => ({ LEADER:'负责人', VICE_LEADER:'副负责人', MEMBER:'成员' }[r]||r)
-
-const confirmDelete = async (id) => {
-  if (!confirm('确定删除该社团吗？此操作不可撤销。')) return
+const remove = async (row) => {
   try {
-    const result = await api.delete(`/club/${id}`)
-    if (result.code === 200) { showToast('删除成功', 'success'); loadClubs() }
-    else showToast(result.message, 'danger')
-  } catch (e) { showToast('删除失败', 'danger') }
+    await ElMessageBox.confirm(
+      `确定删除社团「${row.name}」吗？该社团的活动、成员与风采会一并删除，且不可恢复。`,
+      '删除社团',
+      { type: 'warning', confirmButtonText: '确定删除', cancelButtonText: '取消', confirmButtonClass: 'el-button--danger' }
+    )
+  } catch (e) {
+    return
+  }
+
+  try {
+    const result = await api.delete(`/club/${row.id}`)
+    if (result.code === 200) {
+      ElMessage.success('删除成功')
+      loadClubs()
+    } else {
+      ElMessage.error(result.message || '删除失败')
+    }
+  } catch (e) {
+    ElMessage.error('删除失败')
+  }
 }
 
 onMounted(() => {
   loadClubs()
-  modalInstance = new bootstrap.Modal(modalRef.value)
+  loadCategories()
 })
 </script>
+
+<style scoped>
+.club-name {
+  font-size: 14px;
+  color: #1f2d3d;
+}
+
+.club-sub {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #8a94a6;
+}
+
+.muted {
+  color: #b6bfcc;
+}
+
+.drawer-section {
+  margin: 22px 0 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2d3d;
+}
+</style>

@@ -1,0 +1,85 @@
+/**
+ * Element Plus 主题定制
+ *
+ * 只做“换色 + 圆角”，不覆盖组件内部结构，避免升级 Element 后样式错位。
+ * 主色沿用项目原来的深色 #1A1A2E；Element 的 hover / disabled 态依赖 light-3 ~ light-9，
+ * 这里按“主色与白色按比例混合”算出对应色阶，否则按钮 hover 会突然变回默认蓝。
+ */
+:root {
+  --el-color-primary: #1a1a2e;
+  --el-color-primary-light-3: #5f5f6d;
+  --el-color-primary-light-5: #8d8d97;
+  --el-color-primary-light-7: #babac0;
+  --el-color-primary-light-8: #d1d1d5;
+  --el-color-primary-light-9: #e8e8ea;
+  --el-color-primary-dark-2: #151525;
+
+  --el-border-radius-base: 6px;
+  --el-border-radius-small: 4px;
+
+  --el-font-family: 'Microsoft YaHei', 'PingFang SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  --el-text-color-primary: #1f2d3d;
+  --el-text-color-regular: #4a5568;
+  --el-text-color-secondary: #8a94a6;
+
+  --el-bg-color-page: #f5f7fa;
+  --el-border-color-lighter: #ebeef5;
+  --el-border-color-light: #e5e7eb;
+}
+
+/* 表格：与卡片风格统一，表头浅底、行高稍松 */
+.el-table th.el-table__cell {
+  background-color: #f7f9fc;
+  color: #4a5568;
+}
+
+.el-table {
+  --el-table-border-color: #ebeef5;
+}
+
+/* 侧边栏菜单：深色底，选中项用白色文字 + 半透明高亮 */
+.side-menu {
+  border-right: none;
+  background-color: transparent;
+}
+
+.side-menu .el-menu-item,
+.side-menu .el-sub-menu__title {
+  color: #c9d1e0;
+  height: 44px;
+  line-height: 44px;
+  margin: 2px 8px;
+  border-radius: 6px;
+}
+
+.side-menu .el-menu-item:hover,
+.side-menu .el-sub-menu__title:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.side-menu .el-menu-item.is-active {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.side-menu .el-menu-item-group__title {
+  padding: 14px 16px 6px;
+  font-size: 11px;
+  color: #6b7688;
+  letter-spacing: 1px;
+}
+
+/* 深色主色下，primary 按钮 hover 用 light-3 会变浅灰、像禁用，改为加深一档 */
+.el-button--primary:not(.is-disabled):hover,
+.el-button--primary:not(.is-disabled):focus {
+  background-color: var(--el-color-primary-dark-2);
+  border-color: var(--el-color-primary-dark-2);
+}
+
+/* 弹窗遮罩：模糊底层页面，让弹窗成为唯一焦点（el-dialog 的 modal-class） */
+.app-modal-overlay {
+  backdrop-filter: blur(3px);
+  background-color: rgba(26, 26, 46, 0.38) !important;
+}

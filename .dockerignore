@@ -1,0 +1,15 @@
+# 缩小构建上下文：镜像只需要 target 里的 jar
+node_modules
+admin/node_modules
+frontend/node_modules
+admin/dist
+frontend/dist
+deploy
+build
+logs
+.git
+.idea
+sql
+*.log
+target/*
+!target/demo-0.0.1-SNAPSHOT.jar

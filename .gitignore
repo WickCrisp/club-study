@@ -37,23 +37,21 @@ node_modules/
 **/node_modules/
 **/package-lock.json
 
-### Boilerplate ###
-frontend/public/favicon.svg
-frontend/public/icons.svg
+### 敏感配置 ###
+# application.properties 已改为无密钥公共配置（密钥全部走环境变量），需要入库
+# 本地开发口令只存在于 application-dev.properties，绝不入库；clone 后参照部署清单自建
+src/main/resources/application-dev.properties
+**/application-dev.properties
+deploy/.env
+local-test.properties
+*.log
 
-### Sensitive Config ###
-src/main/resources/application.properties
-applicationexample.properties
+### 构建产物 ###
+admin/dist/
+frontend/dist/
 
 ### Claude ###
 .claude/
 
-### Test ###
-src/test/
-
-### Docs ###
-problem.md
-
-### Design Toolkit ###
+### 设计工具包 ###
 ui-ux-pro-max-skill-2.5.0/
-

@@ -1,28 +1,42 @@
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <h2>社团活动管理系统前台</h2>
-      <form @submit.prevent="handleLogin">
-        <div class="mb-3">
-          <label class="form-label">学号</label>
-          <input type="text" class="form-control" v-model="form.studentNo" placeholder="请输入学号" required />
+  <div class="auth-page">
+    <div class="auth-panel">
+      <div class="auth-brand">
+        <div class="auth-logo">社</div>
+        <div>
+          <h1 class="auth-title">社团活动平台</h1>
+          <p class="auth-sub">用学号登录，浏览与报名社团活动</p>
         </div>
-        <div class="mb-3">
-          <label class="form-label">密码</label>
-          <input type="password" class="form-control" v-model="form.password" placeholder="请输入密码" required />
-        </div>
-        <button type="submit" class="btn btn-primary w-100" :disabled="loading">
-          {{ loading ? '登录中...' : '登 录' }}
-        </button>
-      </form>
-      <div class="text-center mt-3">
-        <span>还没有账号？</span><router-link to="/register">立即注册</router-link>
       </div>
-    </div>
-    <div class="toast-container">
-      <div v-if="toast.show" class="alert alert-dismissible fade show" :class="'alert-' + toast.type">
-        {{ toast.message }}
-        <button type="button" class="btn-close" @click="toast.show = false"></button>
+
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" size="large" @submit.prevent>
+        <el-form-item label="学号" prop="studentNo">
+          <el-input
+            v-model="form.studentNo"
+            placeholder="请输入学号"
+            :prefix-icon="User"
+            clearable
+            @keyup.enter="handleLogin"
+          />
+        </el-form-item>
+        <el-form-item label="密码" prop="password">
+          <el-input
+            v-model="form.password"
+            type="password"
+            show-password
+            placeholder="请输入密码"
+            :prefix-icon="Lock"
+            @keyup.enter="handleLogin"
+          />
+        </el-form-item>
+
+        <el-button type="primary" size="large" class="auth-submit" :loading="loading" @click="handleLogin">
+          登 录
+        </el-button>
+      </el-form>
+
+      <div class="auth-footer">
+        还没有账号？<router-link to="/register">立即注册</router-link>
       </div>
     </div>
   </div>
@@ -31,36 +45,47 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { User, Lock } from '@element-plus/icons-vue'
 import api from '../api'
+import { setToken } from '../utils/auth'
 
 const router = useRouter()
 const emit = defineEmits(['update-user'])
-const form = reactive({ studentNo: '', password: '' })
-const loading = ref(false)
-const toast = reactive({ show: false, message: '', type: 'danger' })
 
-const showToast = (message, type) => {
-  toast.show = true
-  toast.message = message
-  toast.type = type
-  setTimeout(() => toast.show = false, 3000)
+const formRef = ref(null)
+const loading = ref(false)
+const form = reactive({ studentNo: '', password: '' })
+
+const rules = {
+  studentNo: [{ required: true, message: '请输入学号', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
 const handleLogin = async () => {
+  if (loading.value) return
+  try {
+    await formRef.value.validate()
+  } catch (e) {
+    return
+  }
+
   loading.value = true
   try {
     const params = new URLSearchParams()
-    params.append('studentNo', form.studentNo)
+    params.append('studentNo', form.studentNo.trim())
     params.append('password', form.password)
+
     const result = await api.post('/user/login', params)
     if (result.code === 200) {
+      setToken(result.data.token)
       emit('update-user')
       router.push('/')
     } else {
-      showToast(result.message || '登录失败', 'danger')
+      ElMessage.error(result.message || '登录失败')
     }
   } catch (e) {
-    showToast('网络错误，请重试', 'danger')
+    ElMessage.error(e.message || '网络错误，请重试')
   } finally {
     loading.value = false
   }

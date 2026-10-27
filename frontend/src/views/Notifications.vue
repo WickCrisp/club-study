@@ -1,162 +1,192 @@
 <template>
-  <div class="container">
-    <div class="page-header">
-      <h2>🔔 通知中心</h2>
-      <p class="text-muted">查看你的申请和报名状态</p>
+  <div class="app-page notice-page">
+    <div class="page-head">
+      <div>
+        <h2>通知中心</h2>
+        <p>查看你提交的入社申请与活动报名的处理结果</p>
+      </div>
+      <div class="head-actions">
+        <el-radio-group v-model="tab">
+          <el-radio-button value="club">入社申请</el-radio-button>
+          <el-radio-button value="activity">活动报名</el-radio-button>
+        </el-radio-group>
+        <el-badge v-if="tab === 'club' && rejectedCount > 0" :value="rejectedCount" type="danger" class="badge">
+          <span class="badge-text">被拒绝</span>
+        </el-badge>
+      </div>
     </div>
 
-    <ul class="nav nav-tabs mb-4">
-      <li class="nav-item">
-        <a class="nav-link" :class="{ active: tab === 'club' }" href="#" @click.prevent="tab = 'club'">
-          入社申请
-          <span v-if="rejectedCount > 0" class="badge bg-danger ms-1">{{ rejectedCount }}</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" :class="{ active: tab === 'activity' }" href="#" @click.prevent="tab = 'activity'">
-          活动报名
-        </a>
-      </li>
-    </ul>
-
-    <!-- 入社申请 -->
-    <div v-if="tab === 'club'">
-      <div v-if="clubApplications.length > 0">
-        <div class="card mb-3" v-for="app in clubApplications" :key="app.id" :class="statusCardClass(app.status)">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <h5 class="card-title mb-1">{{ app.clubName }}</h5>
-                <p class="text-muted small mb-1" v-if="app.applyReason">申请理由：{{ app.applyReason }}</p>
-                <p class="text-muted small mb-0">申请时间：{{ app.createdAt || '-' }}</p>
-              </div>
-              <span class="badge fs-6" :class="statusBadgeClass(app.status)">
-                {{ statusLabel(app.status) }}
-              </span>
+    <div v-loading="loading">
+      <template v-if="tab === 'club'">
+        <el-card v-for="app in clubApplications" :key="app.id" shadow="never" class="msg-card">
+          <div class="msg-head">
+            <div class="msg-left">
+              <h3>{{ app.clubName || ('社团 #' + app.clubId) }}</h3>
+              <p v-if="app.applyReason" class="reason">申请理由：{{ app.applyReason }}</p>
+              <p class="time">申请时间：{{ formatTime(app.createdAt) }}</p>
             </div>
-            <div v-if="app.status === 'PENDING'" class="mt-2 text-warning small">
-              等待管理员审核中...
-            </div>
-            <div v-else-if="app.status === 'APPROVED'" class="mt-2 text-success small">
-              你的申请已通过，现在可以参与社团活动了！
-            </div>
-            <div v-else-if="app.status === 'REJECTED'" class="mt-2 text-danger small">
-              你的申请已被拒绝，如有疑问请联系社团负责人。
-            </div>
-            <div v-else-if="app.status === 'QUIT'" class="mt-2 text-muted small">
-              你已退出该社团
-            </div>
+            <el-tag :type="statusType(app.status)" effect="light" round>{{ statusText(app.status) }}</el-tag>
           </div>
-        </div>
-      </div>
-      <div v-else class="empty-state">
-        <div class="icon"></div>
-        <p>暂无入社申请记录</p>
-      </div>
-    </div>
+          <div class="hint" :class="hintType(app.status)">{{ clubHint(app.status) }}</div>
+        </el-card>
 
-    <!-- 活动报名 -->
-    <div v-if="tab === 'activity'">
-      <div v-if="activityRegistrations.length > 0">
-        <div class="card mb-3" v-for="reg in activityRegistrations" :key="reg.id" :class="statusCardClass(reg.status)">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <h5 class="card-title mb-1">{{ reg.activityTitle }}</h5>
-                <p class="text-muted small mb-0">报名时间：{{ reg.registeredAt || reg.createdAt || '-' }}</p>
-                <p class="text-muted small mb-0" v-if="reg.cancelledAt">取消时间：{{ reg.cancelledAt }}</p>
-              </div>
-              <span class="badge fs-6" :class="statusBadgeClass(reg.status)">
-                {{ statusLabel(reg.status) }}
-              </span>
+        <el-empty v-if="!loading && clubApplications.length === 0" description="暂无入社申请记录" />
+      </template>
+
+      <template v-else>
+        <el-card v-for="reg in activityRegistrations" :key="reg.id" shadow="never" class="msg-card">
+          <div class="msg-head">
+            <div class="msg-left">
+              <h3>{{ reg.activityTitle || ('活动 #' + reg.activityId) }}</h3>
+              <p class="time">报名时间：{{ formatTime(reg.registeredAt || reg.createdAt) }}</p>
+              <p v-if="reg.cancelledAt" class="time">取消时间：{{ formatTime(reg.cancelledAt) }}</p>
             </div>
-            <div v-if="reg.status === 'REGISTERED'" class="mt-2 text-success small">
-              已成功报名，记得按时参加活动！
-            </div>
-            <div v-else-if="reg.status === 'CANCELLED'" class="mt-2 text-muted small">
-              你已取消该活动的报名
-            </div>
+            <el-tag :type="statusType(reg.status)" effect="light" round>{{ statusText(reg.status) }}</el-tag>
           </div>
-        </div>
-      </div>
-      <div v-else class="empty-state">
-        <div class="icon"></div>
-        <p>暂无活动报名记录</p>
-      </div>
-    </div>
+          <div class="hint" :class="hintType(reg.status)">{{ regHint(reg.status) }}</div>
+        </el-card>
 
-    <div class="toast-container">
-      <div v-if="toast.show" class="alert alert-dismissible fade show" :class="'alert-' + toast.type">
-        {{ toast.message }}
-        <button type="button" class="btn-close" @click="toast.show = false"></button>
-      </div>
+        <el-empty v-if="!loading && activityRegistrations.length === 0" description="暂无活动报名记录" />
+      </template>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '../api'
 
 const tab = ref('club')
 const clubApplications = ref([])
 const activityRegistrations = ref([])
-const toast = reactive({ show: false, message: '', type: 'danger' })
+const loading = ref(false)
 
-const rejectedCount = computed(() =>
-  clubApplications.value.filter(a => a.status === 'REJECTED').length
-)
+const rejectedCount = computed(() => clubApplications.value.filter(a => a.status === 'REJECTED').length)
 
-const showToast = (message, type) => {
-  toast.show = true; toast.message = message; toast.type = type
-  setTimeout(() => toast.show = false, 3000)
-}
+const formatTime = (t) => (t ? t.substring(0, 16).replace('T', ' ') : '—')
 
-const statusLabel = (status) => {
-  const map = {
-    PENDING: '审核中', APPROVED: '已通过', REJECTED: '已拒绝', QUIT: '已退出', QUIT_PENDING: '退出审核中',
-    REGISTERED: '已报名', CANCELLED: '已取消', CANCEL_PENDING: '取消审核中',
-  }
-  return map[status] || status
-}
+const statusText = (s) => ({
+  PENDING: '审核中', APPROVED: '已通过', REJECTED: '已拒绝', QUIT: '已退出', QUIT_PENDING: '退出审核中',
+  REGISTERED: '已报名', CANCELLED: '已取消', CANCEL_PENDING: '取消审核中'
+}[s] || s)
 
-const statusBadgeClass = (status) => {
-  const map = {
-    PENDING: 'bg-warning text-dark',
-    APPROVED: 'bg-success',
-    REJECTED: 'bg-danger',
-    QUIT: 'bg-secondary',
-    QUIT_PENDING: 'bg-warning text-dark',
-    REGISTERED: 'bg-success',
-    CANCELLED: 'bg-secondary',
-    CANCEL_PENDING: 'bg-warning text-dark',
-  }
-  return map[status] || 'bg-secondary'
-}
+const statusType = (s) => ({
+  PENDING: 'warning', QUIT_PENDING: 'warning', CANCEL_PENDING: 'warning',
+  APPROVED: 'success', REGISTERED: 'success',
+  REJECTED: 'danger',
+  QUIT: 'info', CANCELLED: 'info'
+}[s] || 'info')
 
-const statusCardClass = (status) => {
-  if (status === 'REJECTED') return 'border-danger'
-  if (status === 'APPROVED' || status === 'REGISTERED') return 'border-success'
-  if (status === 'QUIT_PENDING' || status === 'CANCEL_PENDING') return 'border-warning'
-  return ''
-}
+const hintType = (s) => ({
+  PENDING: 'warn', QUIT_PENDING: 'warn', CANCEL_PENDING: 'warn',
+  APPROVED: 'ok', REGISTERED: 'ok',
+  REJECTED: 'bad'
+}[s] || 'muted')
 
-const loadClubApplications = async () => {
+const clubHint = (s) => ({
+  PENDING: '等待负责人或管理员审核，通过后你就能参加这个社团的活动了。',
+  APPROVED: '申请已通过，现在可以参加社团活动了。',
+  REJECTED: '申请被拒绝。如果仍有疑问，可以在社团详情页重新申请，或联系负责人。',
+  QUIT: '你已退出该社团。',
+  QUIT_PENDING: '退出申请已提交，等待负责人审批。'
+}[s] || '')
+
+const regHint = (s) => ({
+  REGISTERED: '报名成功，记得按时参加。',
+  CANCEL_PENDING: '取消申请已提交，审批通过后名额才会退回活动。',
+  CANCELLED: '你已取消这次报名。'
+}[s] || '')
+
+const load = async () => {
+  loading.value = true
   try {
-    const result = await api.get('/club-member/my')
-    if (result.code === 200) clubApplications.value = result.data || []
-  } catch (e) { showToast('加载入社申请失败', 'danger') }
+    const [clubRes, regRes] = await Promise.all([
+      api.get('/club-member/my'),
+      api.get('/registration/my')
+    ])
+    if (clubRes.code === 200) clubApplications.value = clubRes.data || []
+    if (regRes.code === 200) activityRegistrations.value = regRes.data || []
+  } catch (e) {
+    clubApplications.value = []
+    activityRegistrations.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
-const loadActivityRegistrations = async () => {
-  try {
-    const result = await api.get('/registration/my')
-    if (result.code === 200) activityRegistrations.value = result.data || []
-  } catch (e) { showToast('加载报名记录失败', 'danger') }
-}
-
-onMounted(() => {
-  loadClubApplications()
-  loadActivityRegistrations()
-})
+onMounted(load)
 </script>
+
+<style scoped>
+.notice-page {
+  max-width: 900px;
+}
+
+.badge {
+  margin-left: 4px;
+}
+
+.badge-text {
+  font-size: 12px;
+  color: #8a94a6;
+}
+
+.msg-card {
+  border-radius: 10px;
+  margin-bottom: 14px;
+}
+
+.msg-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.msg-left h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1f2d3d;
+}
+
+.reason {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: #4a5568;
+}
+
+.time {
+  margin: 0;
+  font-size: 12px;
+  color: #a8abb2;
+}
+
+.hint {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.hint.warn {
+  background: #fdf6ec;
+  color: #b88230;
+}
+
+.hint.ok {
+  background: #f0f9eb;
+  color: #529b2e;
+}
+
+.hint.bad {
+  background: #fef0f0;
+  color: #c45656;
+}
+
+.hint.muted {
+  background: #f4f4f5;
+  color: #8a94a6;
+}
+</style>
